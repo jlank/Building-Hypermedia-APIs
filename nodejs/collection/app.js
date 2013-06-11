@@ -9,10 +9,15 @@
 var express = require('express');
 var app = express();
 var cons = require('consolidate');
+var partials = require('express-partials');
+var protocol = 'http';
+var host = 'localhost';
+var port = '3000';
+var site = protocol + '://' + host + ':' + port;
+
 
 // for couch
 var cradle = require('cradle');
-//var db = new(cradle.Connection)().database('collection-data-tasks');
 var nano = require('nano')('http://localhost:5984');
 var db = nano.use('collection-data-tasks');
 
@@ -23,9 +28,11 @@ var contentType = 'application/json';
 app.configure(function(){
   app.set('views', __dirname + '/views');
   app.set('view engine', 'ejs');
+  app.use(partials());
   app.use(express.bodyParser());
   app.use(express.methodOverride());
   app.use(app.router);
+  app.use(express.logger({format: ':response-time ms - :date - :req[x-real-ip] - :method :url :user-agent / :referrer'}));
   app.use(express.static(__dirname + '/public'));
 });
 
@@ -37,7 +44,7 @@ app.configure('production', function(){
   app.use(express.errorHandler());
 });
 
-// register custom media type as a JSON format
+// register custom media type as a JSON format -- this doesn't work in express 3.x, not sure how to do this, or if it is needed
 //express.bodyParser.parse['application/collection+json'] = JSON.parse;
 
 // Routes
@@ -47,11 +54,11 @@ app.get('/collection/tasks/', function(req, res){
 
   var view = '/_design/example/_view/due_date';
 
-  //db.get(view, function (err, doc) {
   db.view('example', 'due_date', function (err, doc) {
     res.header('content-type',contentType);
     res.render('tasks', {
-      site  : 'http://localhost:3000/collection/tasks/',
+      layout : 'layout',
+      site  : site + '/collection/tasks/',
       items : doc.rows
     });
   });
@@ -62,7 +69,7 @@ app.get('/collection/tasks/;queries', function(req, res){
   res.header('content-type',contentType);
   res.render('queries', {
     layout : 'item-layout',
-    site  : 'http://localhost:3000/collection/tasks/'
+    site  : site + '/collection/tasks/'
   });
 });
 
@@ -70,7 +77,7 @@ app.get('/collection/tasks/;template', function(req, res){
   res.header('content-type',contentType);
   res.render('template', {
     layout : 'item-layout',
-    site  : 'http://localhost:3000/collection/tasks/'
+    site  : site + '/collection/tasks/'
   });
 });
 
@@ -78,11 +85,11 @@ app.get('/collection/tasks/;all', function(req, res){
 
     var view = '/_design/example/_view/all';
 
-    db.get(view, function (err, doc) {
+    db.view('example', 'all', function (err, doc) {
     res.header('content-type',contentType);
     res.render('tasks', {
-      site  : 'http://localhost:3000/collection/tasks/',
-      items : doc
+      site  : site + '/collection/tasks/',
+      items : doc.rows
     });
   });
 });
@@ -91,11 +98,11 @@ app.get('/collection/tasks/;open', function(req, res){
 
     var view = '/_design/example/_view/open';
 
-    db.get(view, function (err, doc) {
+    db.view('example', 'open', function (err, doc) {
     res.header('content-type',contentType);
     res.render('tasks', {
-      site  : 'http://localhost:3000/collection/tasks/',
-      items : doc
+      site  : site + '/collection/tasks/',
+      items : doc.rows
     });
   });
 });
@@ -104,11 +111,11 @@ app.get('/collection/tasks/;closed', function(req, res){
 
     var view = '/_design/example/_view/closed';
 
-    db.get(view, function (err, doc) {
+    db.view('example', 'closed', function (err, doc) {
     res.header('content-type',contentType);
     res.render('tasks', {
-      site  : 'http://localhost:3000/collection/tasks/',
-      items : doc
+      site  : site + '/collection/tasks/',
+      items : doc.rows
     });
   });
 });
@@ -119,16 +126,17 @@ app.get('/collection/tasks/;date-range', function(req, res){
     var d2 = (req.query['date-stop'] || '');
 
     var options = {};
-    options.startkey=String.fromCharCode(34)+d1+String.fromCharCode(34);
-    options.endkey=String.fromCharCode(34)+d2+String.fromCharCode(34);
+    options.startkey = d1.split('-');
+    options.endkey = d2.split('-');
 
     var view = '/_design/example/_view/due_date';
 
-    db.get(view, options, function (err, doc) {
+    console.log(options)
+    db.view('example', 'due_date', options, function (err, doc) {
     res.header('content-type',contentType);
     res.render('tasks', {
-      site  : 'http://localhost:3000/collection/tasks/',
-      items : doc,
+      site  : site + '/collection/tasks/',
+      items : doc.rows,
       query : view
     });
   });
@@ -137,14 +145,14 @@ app.get('/collection/tasks/;date-range', function(req, res){
 /* handle single task item */
 app.get('/collection/tasks/:i', function(req, res){
 
-    var view = '/'+req.params.i;
+    var id = req.params.i;
 
-    db.get(view, function (err, doc) {
+    db.get(id, function (err, doc) {
     res.header('content-type',contentType);
     res.header('etag',doc._rev);
     res.render('task', {
       layout : 'item-layout',
-      site  : 'http://localhost:3000/collection/tasks/',
+      site  : site + '/collection/tasks/',
       item : doc
     });
   });
@@ -181,7 +189,7 @@ app.post('/collection/tasks/', function(req, res){
   item.dateCreated = today();
 
   // write to DB
-  db.save(item, function(err, doc) {
+  db.insert(item, function(err, doc) {
     if(err) {
       res.status=400;
       res.send(err);
@@ -223,8 +231,9 @@ app.put('/collection/tasks/:i', function(req, res) {
   item.completed = completed;
   item.dateDue = dateDue;
   item.dateCreated = today();
+  item._rev = rev;
 
-  db.save(idx, rev, item, function (err, doc) {
+  db.insert(item, idx, function (err, doc) {
     // return the same item
     res.redirect('/collection/tasks/'+idx, 302);
   });
@@ -235,7 +244,7 @@ app.delete('/collection/tasks/:i', function(req, res) {
   var idx = (req.params.i || '');
   var rev = req.header("if-match", "*");
 
-  db.remove(idx, rev, function (err, doc) {
+  db.destroy(idx, rev, function (err, doc) {
     if(err) {
       res.status=400;
       res.send(err);
@@ -265,6 +274,6 @@ function today() {
 
 // Only listen on $ node app.js
 if (!module.parent) {
-  app.listen(3000);
-  console.log("Express server listening on port %d", 3000);
+  app.listen(port);
+  console.log("Express server listening on port %d", port);
 }

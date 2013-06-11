@@ -17,7 +17,7 @@ help = '*** Usage:\n' +
    '    <description> is text of task (in quotes)\n' +
    '    <dueDate> is YYYY-MM-DD (in quotes)\n' +
    '    <completed> is true|false';
-   
+
 // check args and fire off processing
 if(process.argv.length<4 || process.argv.length>5) {
   console.log(help);
@@ -61,7 +61,7 @@ function getTemplate() {
 // write the task data to the server
 function buildTask(template) {
   var coll, i, x, msg;
-  
+
   // populate the template
   coll = template.data;
   for(i=0,x=coll.length;i<x;i++) {
@@ -75,7 +75,7 @@ function buildTask(template) {
       case 'completed':
         coll[i].value = args.completed;
         break;
-    }  
+    }
   }
   msg = '{"template" : '+JSON.stringify(template)+"}";
   sendData(msg);
@@ -86,10 +86,10 @@ function sendData(msg) {
   // set up request
   var hdrs = {
     'host' : host+':'+port,
-    'content-type' : 'application/collection+json',
+    'content-type' : 'application/json',
     'content-length' : (msg.length)
   };
-  
+
   // pass data to the server
   var req = client.request('POST', path, hdrs);
   req.write(msg);
@@ -112,7 +112,7 @@ function sendData(msg) {
     console.log(error);
   });
 
-  req.end();  
+  req.end();
 }
 
 // eof

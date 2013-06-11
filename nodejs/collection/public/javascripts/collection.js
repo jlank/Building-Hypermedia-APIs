@@ -8,6 +8,7 @@ var cjs = function() {
   g.item = {};
   g.collectionUrl = '';
   //g.contentType = 'application/collection+json';
+  g.contentType = 'application/json';
   g.filterUrl = '';
 
   g.inputForm=true;
@@ -98,8 +99,7 @@ var cjs = function() {
 
     dst = document.getElementById('links');
     if(dst) {
-      //console.log(g.data)
-      dst.appendChild(processLinks(g.data.items));
+      dst.appendChild(processLinks(g.data.collection.links));
     }
   }
 

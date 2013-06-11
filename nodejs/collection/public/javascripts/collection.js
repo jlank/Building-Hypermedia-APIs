@@ -2,24 +2,24 @@
 /* Designing Hypermedia APIs by Mike Amundsen (2011) */
 
 var cjs = function() {
-  
+
   var g = {};
   g.data = {};
   g.item = {};
-  g.collectionUrl = ''; 
-  g.contentType = 'application/collection+json';
+  g.collectionUrl = '';
+  //g.contentType = 'application/collection+json';
   g.filterUrl = '';
 
   g.inputForm=true;
   g.editForm=true;
-    
+
   function init() {
     g.filterUrl = getArg('filter');
     if(g.filterUrl!=='') {
       loadList(unescape(g.filterUrl));
     }
     else {
-      loadList();    
+      loadList();
     }
     showLinks();
     showItems();
@@ -30,7 +30,7 @@ var cjs = function() {
   function loadList(href) {
     var ajax;
     var url = (href || g.collectionUrl);
-    
+
     ajax=new XMLHttpRequest();
     if(ajax) {
       ajax.open('get',url,false);
@@ -43,7 +43,7 @@ var cjs = function() {
 
   function loadItem(href) {
     var ajax;
-    
+
     ajax=new XMLHttpRequest();
     if(ajax) {
       ajax.open('get',href,false);
@@ -57,7 +57,7 @@ var cjs = function() {
 
   function filterData(href, rel) {
     var url, coll, i, x, a, args, data;
-    
+
     coll = document.getElementsByTagName('a');
     for(i=0,x=coll.length;i<x;i++) {
       if(coll[i].rel===rel) {
@@ -70,7 +70,7 @@ var cjs = function() {
     if(url.indexOf('?')!=-1) {
       url = url.substring(0,url.indexOf('?'));
     }
-    
+
     args = (a.getAttribute('args') || '');
     if(args==='') {
       window.location = url + "?filter="+encodeURIComponent(href.replace('http://localhost:3000',''));
@@ -95,27 +95,28 @@ var cjs = function() {
 
   function showLinks() {
     var dst;
-    
+
     dst = document.getElementById('links');
     if(dst) {
-      dst.appendChild(processLinks(g.data.collection.links));
+      //console.log(g.data)
+      dst.appendChild(processLinks(g.data.items));
     }
   }
-    
+
   function showItems() {
     var dst, coll, dl, dt, dd, i, x;
-    
+
     dst = document.getElementById('collection');
     if(dst) {
       dl = document.createElement('dl');
-      
+
       coll = g.data.collection.items;
       if(coll) {
         // handle items
         for(i = 0, x = coll.length; i < x; i++) {
           dt = document.createElement('dt');
           dt.appendChild(processItemLink(coll[i], true, i));
-          
+
           dd = document.createElement('dd');
           dd.title = coll[i].href;
           dd.appendChild(processData(coll[i].data));
@@ -131,7 +132,7 @@ var cjs = function() {
 
   function showQueries() {
     var dst;
-    
+
     dst = document.getElementById('queries');
     if(dst) {
       dst.appendChild(processLinks(g.data.collection.queries));
@@ -140,7 +141,7 @@ var cjs = function() {
 
   function processLinks(coll) {
     var ul, li, i, x, a, args;
-        
+
     ul = document.createElement('ul');
 
     if(coll) {
@@ -155,7 +156,7 @@ var cjs = function() {
           args = JSON.stringify(coll[i].data);
           a.setAttribute('args',escape(args));
         }
-        
+
         if(coll[i].rel!=='profile' && coll[i].rel!=='author') {
           a.onclick = function(){filterData(this.href, this.rel); return false;};
         }
@@ -163,17 +164,17 @@ var cjs = function() {
         a.appendChild(document.createTextNode(coll[i].prompt || coll[i].rel));
 
         li = document.createElement('li');
-        li.appendChild(a);         
+        li.appendChild(a);
         ul.appendChild(li);
-      }  
+      }
     }
     return ul;
   }
-    
+
   function processItemLink(item, editable, x) {
     var a, edit;
     edit = editable || true;
-    
+
     a = document.createElement('a');
     if(item) {
       a.className = 'item-link';
@@ -184,18 +185,18 @@ var cjs = function() {
         a.onclick = function(){showItem(item.href); return false;};
       }
     }
-    return a;  
+    return a;
   }
-  
+
   function processData(coll) {
     var i, x, ul, li, sp;
 
     ul = document.createElement('ul');
-    
+
     if(coll) {
       for(i = 0, x = coll.length; i < x; i++) {
         if(coll[i].name && coll[i].value) {
-          li = document.createElement('li');            
+          li = document.createElement('li');
           sp = document.createElement('span');
           sp.className = coll[i].name;
           sp.title = coll[i].name;
@@ -205,52 +206,52 @@ var cjs = function() {
         }
       }
     }
-    return ul;    
+    return ul;
   }
-      
+
   function buildTemplate() {
     var dst, coll, i, x, form, fset;
-    
+
     dst = document.getElementById('write-template');
     if(dst) {
       form = templateForm();
       fset = document.createElement('fieldset');
-      
+
       coll = g.data.collection.template.data;
       for(i = 0, x = coll.length; i < x; i++) {
         fset.appendChild(processInputElement(coll[i]));
       }
-      
+
       fset.appendChild(templateButtons());
       form.appendChild(fset);
-       
+
       dst.appendChild(templateLink());
       dst.appendChild(form);
-    }    
+    }
   }
 
   function templateForm(href) {
     var form,action;
     action = href || g.collectionUrl;
-    
+
     form = document.createElement('form');
     form.method="post";
-    form.action=action; 
+    form.action=action;
     form.style.display='none';
     form.id = 'input-form';
     form.onsubmit = function(){submitInputForm();return false;};
-    
+
     return form;
   }
-  
+
   function processInputElement(item) {
     var lbl, inp, p;
-    
+
     if(item) {
       lbl = document.createElement('label');
       lbl.for = item.name;
       lbl.innerHTML = item.prompt || item.name;
-      
+
       inp = document.createElement('input');
       inp.type="text";
       inp.name = item.name;
@@ -260,7 +261,7 @@ var cjs = function() {
       else {
         inp.placeholder = item.name;
       }
-      
+
       p = document.createElement('p');
       p.appendChild(lbl);
       p.appendChild(inp);
@@ -270,7 +271,7 @@ var cjs = function() {
 
   function templateButtons() {
     var inp, p;
-    
+
     inp = document.createElement('input');
     inp.type = 'submit';
     inp.value = 'Save';
@@ -294,12 +295,12 @@ var cjs = function() {
     inp.onclick = function(){toggleInputForm(false);};
     p.appendChild(inp);
 
-    return p;  
+    return p;
   }
 
   function templateLink() {
     var a, p;
-    
+
     a = document.createElement('a');
     a.href='#';
     a.onclick = function(){toggleInputForm(); return false;};
@@ -308,26 +309,26 @@ var cjs = function() {
     p.className='input-block';
     p.appendChild(a);
 
-    return p;  
+    return p;
   }
-        
+
   function showItem(href) {
     loadItem(href);
     showEditForm(href,g.item);
   }
-  
+
   function showEditForm(href) {
     var coll, i, x, str, form, name, inp;
     str = '';
-    
+
     form = document.getElementById('input-form');
     if(form) {
       form.action = href;
       form.setAttribute('etag',g.etag);
     }
-    
+
     coll = g.item.collection.items[0].data;
-    
+
     for( i = 0, x = coll.length; i < x; i++) {
       name = coll[i].name;
       inp = document.getElementsByName(name)[0];
@@ -343,7 +344,7 @@ var cjs = function() {
         inp.value = coll[i].value;
       }
     }
-    
+
     inp = document.getElementsByName('delete')[0];
     if(inp) {
       inp.style.display = 'inline';
@@ -353,7 +354,7 @@ var cjs = function() {
 
   function toggleInputForm() {
     var elm, coll, i, x, inp;
-    
+
     elm = document.getElementById('input-form');
     if(elm) {
       if(g.inputForm===true) {
@@ -376,10 +377,10 @@ var cjs = function() {
       }
     }
   }
-  
+
   function submitInputForm() {
     var item, form, coll, i, x, z, etag, href, ajax;
-    
+
     form = document.getElementById('input-form');
     if(form) {
       coll = form.getElementsByTagName('input');
@@ -409,7 +410,7 @@ var cjs = function() {
             ajax.setRequestHeader('if-match',etag);
           }
           else {
-            ajax.open('post',href,false);          
+            ajax.open('post',href,false);
           }
           ajax.setRequestHeader('content-type',g.contentType);
           ajax.send(item);
@@ -448,16 +449,16 @@ var cjs = function() {
     }
     return false;
   }
-  
+
   function getArg(arg)
   {
     var id,match,rex;
     arg = arg || '';
     id = '';
-    
+
     rex = new RegExp("(?:\\?|&){@arg}=([^&]*)".replace('{@arg}',arg));
     match = rex.exec(location.search.replace("+"," "));
-    
+
     if (match !== null)
     {
       id=match[1];
